@@ -17,7 +17,7 @@ class Learner extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $primaryKey = 'studentid';
+    protected $primaryKey = 'lrn';
     protected $fillable = [
         'lrn',
         'firstname',
@@ -29,10 +29,11 @@ class Learner extends Authenticatable
         'placeofbirth',
         'religion',
         'civil_status',
-        'education',
+        'last_education',
         'contact_numbers',
         'email',
         'password',
+        'password_change_request'
     ];
 
     /**
@@ -55,6 +56,7 @@ class Learner extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_change_request' => 'integer', // Cast to integer
         ];
     }
 }
