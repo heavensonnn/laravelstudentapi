@@ -408,7 +408,7 @@ class ExecuteController extends Controller
         $classid = $request->input('classid');
 
         $modules = DB::table('modules')
-            ->select('modules.*', DB::raw("DATE_FORMAT(modules.created_at, '%M %d, %Y') as formatted_date"))
+            ->select('modules.*', DB::raw("DATE_FORMAT(modules.date, '%M %d, %Y') as formatted_date"))
             ->where('modules.classid', $classid)
             ->get();
 
