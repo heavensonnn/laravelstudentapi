@@ -52,6 +52,10 @@ Route::get('/messages/{id}', [ExecuteController::class, 'showMessages']);
 Route::get('/admins/{id}', [ExecuteController::class, 'getAdmin']);
 Route::post('/messages/reply', [ExecuteController::class, 'sendReply']);
 Route::post('/messages/compose', [ExecuteController::class, 'sendMessage']);
+Route::get('/messages/unread/{lrn}', [ExecuteController::class, 'getUnreadMessages']);
+Route::post('/messages/clear', [ExecuteController::class, 'clearUnreadMessages']);
+Route::get('/messages/getAdminDetails/{lrn}', [ExecuteController::class, 'getAdminDetails']);
+
 
 
 Route::post('/subjects/create', [ExecuteController::class, 'createAssessment']);

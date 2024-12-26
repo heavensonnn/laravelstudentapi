@@ -410,6 +410,7 @@ class ExecuteController extends Controller
         $modules = DB::table('modules')
             ->select('modules.*', DB::raw("DATE_FORMAT(modules.date, '%M %d, %Y') as formatted_date"))
             ->where('modules.classid', $classid)
+            // ->orderBy('modules.date', 'desc')
             ->get();
 
 
@@ -434,8 +435,9 @@ class ExecuteController extends Controller
 
         // Get all lessons for the specified module
         $lessons = DB::table('lessons')
-            ->where('module_id', $module_id)
-            ->get();
+        ->select('lessons.*', DB::raw('(SELECT COUNT(*) FROM assessments WHERE assessments.lesson_id = lessons.lesson_id) as total_assessments'))
+        ->where('lessons.module_id', $module_id)
+        ->get();
 
         // For each lesson, fetch related media data
         foreach ($lessons as $lesson) {
@@ -470,6 +472,7 @@ class ExecuteController extends Controller
             })
             ->where('assessments.lesson_id', $lesson_id)
             ->get();
+
 
         return response()->json($assessments);
     }
@@ -906,7 +909,7 @@ class ExecuteController extends Controller
                 ->join('admins', 'messages.adminID', '=', 'admins.adminID')
                 ->where('messages.lrn', $id)
                 ->select('messages.*', 'admins.firstname', 'admins.lastname', 'admins.adminID')
-                ->orderBy('messages.updated_at', 'desc')
+                ->orderBy('messages.updated_at', 'asc')
                 ->get();
         
         return response()->json($messages);
@@ -954,25 +957,22 @@ class ExecuteController extends Controller
         //Fetch learner details
         $learner = Learner::find($validatedData['lrn']);
 
-        //Update or create the message
-        // $message = Message::where('adminID', $validatedData['adminID'])
-        //     ->orderBy('created_at', 'desc')
-        //     ->first();
-        
-        // if ($message) {
-        //     $message->messages = $validatedData['messages'];
-        //     $message->lrn = $validatedData['lrn'];
-        //     $message->sender_name = $learner->firstname . ' ' . $learner->lastname; //Add sender name
-        //     $message->updated_at = now();
-        //     $message->save();
-        // } else {
-            $message = new Message();
-            $message->lrn = $validatedData['lrn'];
-            $message->adminID = $validatedData['adminID'];
-            $message->messages = $validatedData['messages'];
-            $message->sender_name = $learner->firstname . ' ' . $learner->lastname;
-            $message->save();
-        // }
+        $message = new Message();
+        $message->lrn = $validatedData['lrn'];
+        $message->adminID = $validatedData['adminID'];
+        $message->messages = $validatedData['messages'];
+        $message->sender_name = $learner->firstname . ' ' . $learner->lastname;
+        $message->status = 0;
+        $message->save();
+
+        $adminID = $request->adminID;
+        $lrn = $request->lrn;
+
+        DB::table('messages')
+            ->where('adminID', $adminID)
+            ->where('lrn', $lrn)
+            ->where('messageid', '!=', $message->messageid)
+            ->update(['status' => 1]);
 
         return response()->json(['message' => 'Message sent successfully!'], 200);
     }
@@ -1117,4 +1117,48 @@ class ExecuteController extends Controller
         return response()->json($result);
     }
 
+    // Function to get unread messages
+    public function getUnreadMessages($lrn)
+    {
+
+        // Fetch unread messages based on the sender_name and join with learners
+        $unreadMessages = DB::table('messages')
+        ->join('learners', 'messages.lrn', '=', 'learners.lrn')
+        ->where('learners.lrn', $lrn)
+        ->whereRaw('messages.sender_name != CONCAT(learners.firstname, " ", learners.lastname)')
+        ->where('messages.status', 0)
+        ->select('messages.*')
+        ->get();
+        $count = $unreadMessages->count(); // Get total unread messages
+
+        return $count;
+    }
+
+    // Function to clear unread messages count
+    public function clearUnreadMessages(Request $request)
+    {
+        $lrn = $request->input('lrn'); // Pass LRN dynamically (e.g., logged-in user)
+
+        // Clear logic can vary depending on your implementation
+        // Here, just an acknowledgment response
+        return response()->json(['message' => 'Messages cleared']);
+    }
+
+    public function getAdminDetails($lrn)
+    {
+        $admin = DB::table('admins')
+            ->join('classes', 'admins.adminID', '=', 'classes.adminid')
+            ->join('rosters', 'classes.classid', '=', 'rosters.classid')
+            ->where('rosters.lrn', $lrn)
+            ->distinct()
+            ->select('admins.adminID')
+            ->first();
+    
+        // Check if an admin was found and return the adminID as a string
+        if ($admin) {
+            return (string) $admin->adminID; // Cast to string
+        }
+    
+        return null; // Return null or handle the case where no admin is found
+    }
 }
